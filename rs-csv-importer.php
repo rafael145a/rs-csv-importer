@@ -10,8 +10,12 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
 Version: 1.3
 */
 
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+    require_once __DIR__ . '/cli.php';
+}
+
 if ( !defined('WP_LOAD_IMPORTERS') )
-	return;
+	define('WP_LOAD_IMPORTERS', true);
 
 // Load Importer API
 require_once ABSPATH . 'wp-admin/includes/import.php';
