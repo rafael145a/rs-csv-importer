@@ -14,8 +14,9 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
     require_once __DIR__ . '/cli.php';
 }
 
+
 if ( !defined('WP_LOAD_IMPORTERS') )
-	define('WP_LOAD_IMPORTERS', true);
+	return;
 
 // Load Importer API
 require_once ABSPATH . 'wp-admin/includes/import.php';

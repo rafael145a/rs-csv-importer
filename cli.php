@@ -3,7 +3,9 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
     return;
 }
 
-// Força carregamento das dependências do admin
+define('WP_LOAD_IMPORTERS', true);
+
+// Force loading of admin dependencies
 require_once ABSPATH . 'wp-admin/includes/import.php';
 
 if ( ! class_exists( 'WP_Importer' ) ) {
@@ -15,7 +17,7 @@ if ( ! class_exists( 'WP_Importer' ) ) {
 }
 
 
-// Carrega plugin principal
+// Load main plugin
 if ( ! class_exists( 'RS_CSV_Importer' ) ) {
     require_once __DIR__ . '/rs-csv-importer.php';
 }
@@ -23,16 +25,16 @@ if ( ! class_exists( 'RS_CSV_Importer' ) ) {
 class RS_CSV_Importer_CLI_Command {
 
     /**
-     * Importa posts de um arquivo CSV.
+     * Import posts from CSV file by WPCLI.
      *
      * ## OPTIONS
      *
      * --file=<file>
-     * : Caminho absoluto para o arquivo CSV.
+     * : Absolute path to CSV file.
      *
      * ## EXAMPLES
      *
-     *     wp rs-csv-importer import --file=/caminho/para/arquivo.csv
+     *     wp rs-csv-importer import --file=/path/to/file.csv
      */
     public function import( $args, $assoc_args ) {
         $file = $assoc_args['file'] ?? null;
@@ -46,9 +48,9 @@ class RS_CSV_Importer_CLI_Command {
 
         $importer = new RS_CSV_Importer();
 
-        // Setando as propriedades necessárias
+        // Setting needed properties
         $importer->file = $file;
-        $importer->id = 0; // Não há attachment (upload)
+        $importer->id = 0; // There is no attachment (upload)
 
         $result = self::process_posts_cli( $importer );
 
@@ -60,13 +62,13 @@ class RS_CSV_Importer_CLI_Command {
     }
 
     /**
-     * Versão adaptada do process_posts para WP-CLI.
+     * Adapted to handle CSV import via WP-CLI.
      */
     public static function process_posts_cli( $importer ) {
         $h = new RS_CSV_Helper;
         $handle = $h->fopen($importer->file, 'r');
         if ( $handle == false ) {
-            return new WP_Error( 'csv_importer', 'Falha ao abrir o arquivo.' );
+            return new WP_Error( 'csv_importer', 'Failed to open file.' );
         }
 
         $is_first = true;
@@ -82,16 +84,16 @@ class RS_CSV_Importer_CLI_Command {
                 $is_update = false;
                 $error = new WP_Error();
 
-                // Replicando a lógica do import original
+                // Replicate the logic from the original importer
                 $post_type = $h->get_data($importer, $data, 'post_type');
                 if ($post_type) {
                     if (post_type_exists($post_type)) {
                         $post['post_type'] = $post_type;
                     } else {
-                        $error->add('post_type_exists', sprintf('Tipo de post inválido: "%s".', $post_type));
+                        $error->add('post_type_exists', sprintf('Invalid post_type: "%s".', $post_type));
                     }
                 } else {
-                    WP_CLI::log('Atenção: inclua post_type no CSV.');
+                    WP_CLI::log('Attention: post_type not found.');
                 }
 
                 $post_id = $h->get_data($importer, $data, 'ID');
@@ -105,7 +107,7 @@ class RS_CSV_Importer_CLI_Command {
                             $post['ID'] = $post_id;
                             $is_update = true;
                         } else {
-                            $error->add('post_type_check', sprintf('O post_type do CSV não bate com o do banco. post_id: %d, post_type(csv): %s, post_type(db): %s', $post_id, $post_type, $post_exist->post_type));
+                            $error->add('post_type_check', sprintf('The post_type value from your csv file does not match the existing data in the database. post_id: %d, post_type(csv): %s, post_type(db): %s', $post_id, $post_type, $post_exist->post_type));
                         }
                     }
                 }
@@ -221,7 +223,6 @@ class RS_CSV_Importer_CLI_Command {
                     }
                 }
 
-                // Filtros do plugin
                 $post = apply_filters('really_simple_csv_importer_save_post', $post, $is_update);
                 $meta = apply_filters('really_simple_csv_importer_save_meta', $meta, $post, $is_update);
                 $tax = apply_filters('really_simple_csv_importer_save_tax', $tax, $post, $is_update);
@@ -244,7 +245,7 @@ class RS_CSV_Importer_CLI_Command {
                         if (is_object($post_object)) {
                             do_action('really_simple_csv_importer_post_saved', $post_object);
                         }
-                        WP_CLI::log("Importado: " . ($post_title ?: '(sem título)'));
+                        WP_CLI::log("Imported post: " . ($post_title ?: '(no title)'));
                         $count++;
                     }
                 }
@@ -253,14 +254,14 @@ class RS_CSV_Importer_CLI_Command {
                     WP_CLI::warning($message);
                 }
 
-                // Libera memória
+                // Flush memory
                 wp_cache_flush();
             }
         }
 
         $h->fclose($handle);
 
-        WP_CLI::success("Importação concluída! Total de registros importados: $count");
+        WP_CLI::success("Finished import. Imported $count posts");
 
         return true;
     }
